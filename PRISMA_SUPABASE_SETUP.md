@@ -71,20 +71,44 @@ generator client {
 
 Prisma v7 requires a **driver adapter** for PostgreSQL (already included in the install command above).
 
-Use `DATABASE_URL` (transaction pooler) with `PrismaPg`:
+Create an explicit `pg.Pool` and pass it to `PrismaPg` — this is more reliable than passing a config object:
 
 ```ts
+import "dotenv/config";
+import pg from "pg";
 import { PrismaClient } from "../generated/prisma/client.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const adapter = new PrismaPg({
-  connectionString: process.env["DATABASE_URL"],
-});
+const pool = new pg.Pool({ connectionString: process.env["DATABASE_URL"] });
+const adapter = new PrismaPg(pool);
 
 export const prisma = new PrismaClient({ adapter });
 ```
 
 > **Why `@prisma/adapter-pg`?** Prisma v7 decoupled the database driver from the client. You must provide an adapter that matches your database. Without it, `PrismaClient` won't know how to connect.
+>
+> **Why explicit `pg.Pool`?** The `PrismaPg({ connectionString })` shorthand can have issues creating the internal pool. Creating the pool explicitly and passing it to `PrismaPg(pool)` avoids those problems.
+
+### Supabase Client
+
+The Supabase SDK also needs env vars loaded at module evaluation time:
+
+```ts
+import "dotenv/config";
+import { createClient } from "@supabase/supabase-js";
+
+export const supabase = createClient(
+  process.env["SUPABASE_URL"]!,
+  process.env["SUPABASE_ANON_KEY"]!
+);
+```
+
+Add the corresponding env vars to `.env`:
+
+```env
+SUPABASE_URL="https://<project-ref>.supabase.co"
+SUPABASE_ANON_KEY="<your-anon-key>"
+```
 
 ---
 
